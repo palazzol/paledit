@@ -155,16 +155,12 @@ class ControlsScreen(BoxLayout):
         self.box2 = BoxLayout(size_hint=(1, 0.5))
         self.add_widget(self.box2)
         
-        self.prev = Button(text='Previous')
+        self.prev = Button(text='Previous\nGroup')
         self.prev.bind(on_press = self.PrevColor)
         self.box2.add_widget(self.prev)
-        self.next = Button(text='Next')
+        self.next = Button(text='Next\nGroup')
         self.next.bind(on_press = self.NextColor)
         self.box2.add_widget(self.next)
-
-        self.sync = ToggleButton(text='Use Sync Levels', size_hint=(1, 0.5))
-        self.sync.bind(on_press = self.UseSyncLevels)
-        self.add_widget(self.sync)
 
         self.blacklevellabel = Label(size_hint=(1, 0.5))
         self.UpdateBlackLevelLabel(0.0)
@@ -172,6 +168,21 @@ class ControlsScreen(BoxLayout):
         self.blacklevel = Slider(min = -2.5, max = 2.5, size_hint=(1, 0.5))
         self.blacklevel.bind(value = self.UpdateBlackLevel)
         self.add_widget(self.blacklevel)
+
+        self.box3 = BoxLayout(size_hint=(1, 0.5))
+        self.add_widget(self.box3)
+
+        #self.color0 = ToggleButton(text='Black=\nColor 0', group="mode")
+        #self.color0.bind(on_press = self.UseColor0)
+        #self.box3.add_widget(self.color0)
+
+        self.sync = ToggleButton(text='AC Coupled', group="mode")
+        self.sync.bind(on_press = self.UseSyncLevels)
+        self.box3.add_widget(self.sync)
+
+        self.zero = ToggleButton(text='DC Coupled', group="mode", state="down")
+        self.zero.bind(on_press = self.UseZeroVolts)
+        self.box3.add_widget(self.zero)
 
         self.whitelevellabel = Label(size_hint=(1, 0.5))
         self.UpdateWhiteLevelLabel(5.0)
@@ -214,7 +225,7 @@ class ControlsScreen(BoxLayout):
             self.page.text = s
 
     def UpdateBlackLevelLabel(self, level):
-        self.blacklevellabel.text = 'Black Level: {:.3f}'.format(level)
+        self.blacklevellabel.text = 'Black Level Adj.: {:.3f}'.format(level)
 
     def UpdateWhiteLevelLabel(self, level):
         self.whitelevellabel.text = 'White Level: {:.3f}'.format(level)
@@ -239,6 +250,18 @@ class ControlsScreen(BoxLayout):
             self.parent.UseSyncLevels(True)
         else:
             self.parent.UseSyncLevels(False)
+
+    def UseZeroVolts(self, w):
+        if w.state == "down":
+            self.parent.UseZeroVolts(True)
+        else:
+            self.parent.UseZeroVolts(False)
+
+    def UseColor0(self, w):
+        if w.state == "down":
+            self.parent.UseColor0(True)
+        else:
+            self.parent.UseColor0(False)
 
     def FilterGorf(self, w):
         self.parent.FilterGorf(w.state == "down")
@@ -323,7 +346,10 @@ class MainWindow(BoxLayout):
         self.filtergorfpgm1 = False
         self.filterwow = False
         self.filterrobby = False
-        self.usesync = False
+        self.MODE_USE_SYNC_LEVELS = 0
+        self.MODE_USE_COLOR_0 = 1
+        self.MODE_USE_ZERO_VOLTS = 2
+        self.mode = self.MODE_USE_ZERO_VOLTS
 
         """
         self.usedcolors = [0x00, # gorf     title - space black? unused?
@@ -383,14 +409,19 @@ class MainWindow(BoxLayout):
                 self.usedcolors.extend([0x00, 0x52, 0x7e, 0xfa])
         else:
             self.usedcolors = list(range(0,256))
-        if self.usesync:
+
+        if self.mode == self.MODE_USE_SYNC_LEVELS:
             self.rmin = self.colordata[0]["Rsync"] + self.blacklevel
             self.gmin = self.colordata[0]["Gsync"] + self.blacklevel
             self.bmin = self.colordata[0]["Bsync"] + self.blacklevel
-        else:
+        elif self.mode == self.MODE_USE_COLOR_0:
             self.rmin = self.colordata[0]["R"] + self.blacklevel
             self.gmin = self.colordata[0]["G"] + self.blacklevel
             self.bmin = self.colordata[0]["B"] + self.blacklevel
+        else:
+            self.rmin = 0.0 + self.blacklevel
+            self.gmin = 0.0 + self.blacklevel
+            self.bmin = 0.0 + self.blacklevel
         self.rmax = self.colordata[0]["R"] + self.whitelevel
         self.gmax = self.colordata[0]["G"] + self.whitelevel
         self.bmax = self.colordata[0]["B"] + self.whitelevel
@@ -424,10 +455,12 @@ class MainWindow(BoxLayout):
         with open(export_filename,"w") as f:
             f.write('//\n')
             f.write('// Created from: '+input_filename+'\n')
-            if self.usesync:
+            if self.mode == MODE_USE_SYNC_LEVELS:
                 f.write('// Black Level referenced to RGB voltages during sync, to adjust for AC coupling in monitor\n')
-            else:
+            elif self.mode == MODE_USE_COLOR_0:
                 f.write('// Black Level referenced from color 0 (black) level\n')
+            else: # MODE_USE_ZERO_VOLTS
+                f.write('// Black Level referenced to zero volts\n\n')
             f.write('// Black Level = '+str(self.blacklevel)+'\n')
             f.write('// White Level = '+str(self.whitelevel)+'\n')
             f.write('// Red Gain    = '+str(self.redgain)+'\n')
@@ -453,7 +486,15 @@ class MainWindow(BoxLayout):
         popup.open()
 
     def UseSyncLevels(self, tf):
-        self.usesync = tf
+        self.mode = self.MODE_USE_SYNC_LEVELS
+        self.UpdateColors()
+
+    def UseColor0(self, tf):
+        self.mode = self.MODE_USE_COLOR_0
+        self.UpdateColors()
+
+    def UseZeroVolts(self, tf):
+        self.mode = self.MODE_USE_ZERO_VOLTS
         self.UpdateColors()
 
     def FilterGorf(self, tf):
