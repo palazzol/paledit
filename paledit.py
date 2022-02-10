@@ -7,15 +7,20 @@ Created on Sun Feb  6 22:16:21 2022
 
 import json
 
+from time import strftime
+
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.button import Button
 from kivy.uix.slider import Slider
+from kivy.uix.popup import Popup
 from kivy.uix.screenmanager import FadeTransition, ScreenManager, Screen
 from kivy.graphics import *
 from kivy.core.window import Window
+
+input_filename = 'stock_with_monitor_connected_20220131-154219_reduced.json'
 
 class Canvas8Color(Screen):
     def __init__(self, **kwargs):
@@ -53,6 +58,7 @@ class Canvas8Color(Screen):
                 effective_width = self.width-2*leftmargin
                 self.rect[i].pos  = (effective_width/8*i+leftmargin, topmargin)
                 self.rect[i].size = (effective_width/8, self.height-topmargin*2)
+            App.get_running_app().root.controls.UpdatePageLabel(self.colorcode)
 
     def SetColor(self,colorcode):
         self.colorcode = colorcode
@@ -105,47 +111,105 @@ class Canvas256Color(Screen):
                 else:
                     self.rect[i].pos  = (effective_width/8*col+leftmargin, self.height-(effective_height/32*row+topmargin+effective_height/32))
                     self.rect[i].size = (effective_width/8, effective_height/32)
+            colorcode = App.get_running_app().root.colorcode
+            App.get_running_app().root.controls.UpdatePageLabel(colorcode)
+            
 
 class ControlsScreen(BoxLayout):
     def __init__(self, **kwargs):
         super(ControlsScreen, self).__init__(**kwargs)
         self.orientation = "vertical"
         self.cols = 1
-        self.mode = ToggleButton(text = 'Show All Colors')
+
+        self.export = Button(text = 'Export Palette', size_hint=(1, 0.5))
+        self.export.bind(on_press = self.ExportPalette)
+        self.add_widget(self.export)
+
+        self.mode = ToggleButton(text = 'Show All Colors', size_hint=(1, 0.5))
         self.mode.bind(on_press = self.AllColors)
         self.add_widget(self.mode)
+
+        self.box = BoxLayout(size_hint=(1, 0.5))
+        self.add_widget(self.box)
+
+        self.filt4 = ToggleButton(text='robby')
+        self.filt4.bind(on_press = self.FilterRobby)
+        self.box.add_widget(self.filt4)
+
+        self.filt3 = ToggleButton(text='wow')
+        self.filt3.bind(on_press = self.FilterWow)
+        self.box.add_widget(self.filt3)
+
+        self.filt1 = ToggleButton(text='gorf')
+        self.filt1.bind(on_press = self.FilterGorf)
+        self.box.add_widget(self.filt1)
+
+        self.filt2 = ToggleButton(text='gorfpgm1')
+        self.filt2.bind(on_press = self.FilterGorfPgm1)
+        self.box.add_widget(self.filt2)
+
         self.page = Label()
         self.add_widget(self.page)
         self.UpdatePageLabel(0)
-        self.prev = Button(text='Previous', size_hint=(1, 0.5))
+
+        self.box2 = BoxLayout(size_hint=(1, 0.5))
+        self.add_widget(self.box2)
+        
+        self.prev = Button(text='Previous')
         self.prev.bind(on_press = self.PrevColor)
-        self.add_widget(self.prev)
-        self.next = Button(text='Next', size_hint=(1, 0.5))
+        self.box2.add_widget(self.prev)
+        self.next = Button(text='Next')
         self.next.bind(on_press = self.NextColor)
-        self.add_widget(self.next)
+        self.box2.add_widget(self.next)
+
         self.sync = ToggleButton(text='Use Sync Levels', size_hint=(1, 0.5))
         self.sync.bind(on_press = self.UseSyncLevels)
         self.add_widget(self.sync)
+
         self.blacklevellabel = Label(size_hint=(1, 0.5))
         self.UpdateBlackLevelLabel(0.0)
         self.add_widget(self.blacklevellabel)
-        self.blacklevel = Slider(min = -2.5, max = 2.5)
+        self.blacklevel = Slider(min = -2.5, max = 2.5, size_hint=(1, 0.5))
         self.blacklevel.bind(value = self.UpdateBlackLevel)
         self.add_widget(self.blacklevel)
+
         self.whitelevellabel = Label(size_hint=(1, 0.5))
         self.UpdateWhiteLevelLabel(5.0)
         self.add_widget(self.whitelevellabel)
-        self.whitelevel = Slider(min = 0.0, max = 5.0, value = 5.0)
+        self.whitelevel = Slider(min = 0.0, max = 5.0, value = 5.0, size_hint=(1, 0.5))
         self.whitelevel.bind(value = self.UpdateWhiteLevel)
         self.add_widget(self.whitelevel)       
+
+        self.redgainlabel = Label(size_hint=(1, 0.5))
+        self.UpdateRedGainLabel(1.0)
+        self.add_widget(self.redgainlabel)
+        self.redgain = Slider(min = 0.0, max = 2.0, value = 1.0, size_hint=(1, 0.5))
+        self.redgain.bind(value = self.UpdateRedGain)
+        self.add_widget(self.redgain)    
+
+        self.greengainlabel = Label(size_hint=(1, 0.5))
+        self.UpdateGreenGainLabel(1.0)
+        self.add_widget(self.greengainlabel)
+        self.greengain = Slider(min = 0.0, max = 2.0, value = 1.0, size_hint=(1, 0.5))
+        self.greengain.bind(value = self.UpdateGreenGain)
+        self.add_widget(self.greengain)      
+
+        self.bluegainlabel = Label(valign='bottom', size_hint=(1, 0.5))
+        self.UpdateBlueGainLabel(1.0)
+        self.add_widget(self.bluegainlabel)
+        self.bluegain = Slider(min = 0.0, max = 2.0, value = 1.0, size_hint=(1, 0.5))
+        self.bluegain.bind(value = self.UpdateBlueGain)
+        self.add_widget(self.bluegain)   
 
     def UpdatePageLabel(self, colorcode):
         if App.get_running_app().root:
             s = ''
-            for i in range(0,8):
+            for i in range(0,4):
                 R,G,B = App.get_running_app().root.CalculateColor(colorcode+i)
                 s = s + '0x{:02X}: {:1.2f}-{:1.2f}-{:1.2f}'.format(colorcode+i,R,G,B)
-                if i<7:
+                R,G,B = App.get_running_app().root.CalculateColor(colorcode+i+4)
+                s = s + '    0x{:02X}: {:1.2f}-{:1.2f}-{:1.2f}'.format(colorcode+i+4,R,G,B)
+                if i<3:
                     s = s + '\n'
             self.page.text = s
 
@@ -154,6 +218,15 @@ class ControlsScreen(BoxLayout):
 
     def UpdateWhiteLevelLabel(self, level):
         self.whitelevellabel.text = 'White Level: {:.3f}'.format(level)
+
+    def UpdateRedGainLabel(self, level):
+        self.redgainlabel.text = 'Red Gain: {:.3f}'.format(level)
+
+    def UpdateGreenGainLabel(self, level):
+        self.greengainlabel.text = 'Green Gain: {:.3f}'.format(level)
+
+    def UpdateBlueGainLabel(self, level):
+        self.bluegainlabel.text = 'Blue Gain: {:.3f}'.format(level)
 
     def AllColors(self, w):
         if w.state == "down":
@@ -166,6 +239,18 @@ class ControlsScreen(BoxLayout):
             self.parent.UseSyncLevels(True)
         else:
             self.parent.UseSyncLevels(False)
+
+    def FilterGorf(self, w):
+        self.parent.FilterGorf(w.state == "down")
+
+    def FilterGorfPgm1(self, w):
+        self.parent.FilterGorfPgm1(w.state == "down")
+
+    def FilterWow(self, w):
+        self.parent.FilterWow(w.state == "down")
+
+    def FilterRobby(self, w):
+        self.parent.FilterRobby(w.state == "down")
 
     def PrevColor(self, w):
         colorcode = App.get_running_app().root.colorcode
@@ -193,6 +278,28 @@ class ControlsScreen(BoxLayout):
         App.get_running_app().root.whitelevel = whitelevel
         App.get_running_app().root.UpdateColors()
 
+    def UpdateRedGain(self, w, level):
+        redgain = w.value
+        self.UpdateRedGainLabel(redgain)
+        App.get_running_app().root.redgain = redgain
+        App.get_running_app().root.UpdateColors()
+
+    def UpdateGreenGain(self, w, level):
+        greengain = w.value
+        self.UpdateGreenGainLabel(greengain)
+        App.get_running_app().root.greengain = greengain
+        App.get_running_app().root.UpdateColors()
+
+    def UpdateBlueGain(self, w, level):
+        bluegain = w.value
+        self.UpdateBlueGainLabel(bluegain)
+        App.get_running_app().root.bluegain = bluegain
+        App.get_running_app().root.UpdateColors()
+
+    def ExportPalette(self, w):
+        if App.get_running_app().root:
+            App.get_running_app().root.ExportPalette()
+
 class MainWindow(BoxLayout):
     def __init__(self, **kwargs):
         super(MainWindow, self).__init__(**kwargs)
@@ -204,12 +311,59 @@ class MainWindow(BoxLayout):
         self.sm.add_widget(Canvas256Color(name='B'))
         self.sm.transition = FadeTransition()
 
-        with open('stock_with_monitor_connected_20220131-154219_reduced.json','r') as f:
+        with open(input_filename,'r') as f:
             self.colordata = json.load(f)
         self.colorcode = 0
         self.blacklevel = 0.0
         self.whitelevel = 5.0
+        self.redgain = 1.0
+        self.greengain = 1.0
+        self.bluegain = 1.0
+        self.filtergorf = False
+        self.filtergorfpgm1 = False
+        self.filterwow = False
+        self.filterrobby = False
         self.usesync = False
+
+        """
+        self.usedcolors = [0x00, # gorf     title - space black? unused?
+                                 # gorfpgm1 title - space black? unused?
+                                 # wow
+                                 # robby
+                           0x04, # gorf     title, laser/galax, warp, flag - gray stars?
+                           0x06, # gorfpgm1 title, laser/galax, warp, flag - brighter gray stars?
+                           0x07, # gorf     astro - white shield
+                                 # gorfpgm1 astro - white shield
+                           0x09, # wow
+                           0x3A, # gorfpgm1 astro bottom row aliens - red/purple?
+                           0x4A, # gorf     title, laser/galax - gorf body red?
+                           0x4B, # gorf     warp - red (lighter?) - explosion
+                           0x51, # wow
+                           0x52, # robby
+                           0x53, # gorf     astro - orange
+                                 # gorfpgm1 astro, warp - astro bottom red, warp explosion
+                           0x54, # gorf     flag - light orange
+                                 # gorfpgm1 title, laser/galax, flag - gorf body light orange?
+                           0x56, # wow
+                           0x65, # gorf     astro - orange/yellow??
+                                 # gorfpgm1 astro - orange/yellow??
+                           0x75, # gorf     title crawl, laser/galax, warp, flag - yellow text, gorf eyes?
+                                 # gorfpgm1 title crawl, laser/galax, warp, flag - yellow text, gorf eyes?
+                           0x7c, # wow
+                           0x7e, # robby
+                           0x9e, # wow
+                           0xA4, # gorf     astro - green
+                                 # gorfpgm1 astro - green
+                           0xc7, # wow
+                           0xDB, # gorf     astro - sky - blue
+                                 # gorfpgm1 astro - sky - blue
+                           0xf3, # wow
+                           0xfa, # robby
+                           0xFC, # gorf     title, laser/galax, warp, flag - gorf blue? feet, pupils?
+                                 # gorfpgm1 title, laser/galax, warp, flag - gorf blue? feet, pupils?
+        ]
+        """
+
         self.UpdateColors()
 
     def SetColor(self, colorcode):
@@ -217,6 +371,18 @@ class MainWindow(BoxLayout):
         self.sm.get_screen('B').Update()
 
     def UpdateColors(self):
+        if (self.filtergorf or self.filtergorfpgm1 or self.filterwow or self.filterrobby):
+            self.usedcolors = []
+            if self.filtergorf:
+                self.usedcolors.extend([0x00, 0x04, 0x07, 0x4a, 0x4b, 0x53, 0x54, 0x65, 0x75, 0xa4, 0xdb, 0xfc])
+            if self.filtergorfpgm1:
+                self.usedcolors.extend([0x00, 0x06, 0x07, 0x3a, 0x53, 0x54, 0x65, 0x75, 0xa4, 0xdb, 0xfc])
+            if self.filterwow:
+                self.usedcolors.extend([0x00, 0x09, 0x51, 0x56, 0x7c, 0x9e, 0xc7, 0xf3])
+            if self.filterrobby:
+                self.usedcolors.extend([0x00, 0x52, 0x7e, 0xfa])
+        else:
+            self.usedcolors = list(range(0,256))
         if self.usesync:
             self.rmin = self.colordata[0]["Rsync"] + self.blacklevel
             self.gmin = self.colordata[0]["Gsync"] + self.blacklevel
@@ -232,10 +398,13 @@ class MainWindow(BoxLayout):
         self.sm.get_screen('B').Update()
         self.controls.UpdatePageLabel(self.colorcode)
 
-    def CalculateColor(self, colorcode):
-        R = (self.colordata[colorcode]["R"]-self.rmin)/self.rmax
-        G = (self.colordata[colorcode]["G"]-self.gmin)/self.gmax
-        B = (self.colordata[colorcode]["B"]-self.bmin)/self.bmax
+    def CalculateColor(self, colorcode, includeall=False):
+        if not includeall:
+            if colorcode not in self.usedcolors:
+                return (0, 0, 0)
+        R = (self.colordata[colorcode]["R"]-self.rmin)/self.rmax*self.redgain
+        G = (self.colordata[colorcode]["G"]-self.gmin)/self.gmax*self.greengain
+        B = (self.colordata[colorcode]["B"]-self.bmin)/self.bmax*self.bluegain
         if R > 1.0:
             R = 1.0
         if G > 1.0:
@@ -251,16 +420,56 @@ class MainWindow(BoxLayout):
         return (R, G, B) 
 
     def ExportPalette(self):
-        timestr = time.strftime("%Y%m%d-%H%M%S")
-        with open(runname+'_'+timestr+'.txt',"w") as f:
-            f.write('// Black Level = '+str())
-            for i in range(0,8):
-                for j in range(0,32):
-                    k = i*32+j
-                    color = self.CalculateColor(k)
+        export_filename = 'trial_palette_' + strftime("%Y%m%d-%H%M%S") + '.txt'
+        with open(export_filename,"w") as f:
+            f.write('//\n')
+            f.write('// Created from: '+input_filename+'\n')
+            if self.usesync:
+                f.write('// Black Level referenced to RGB voltages during sync, to adjust for AC coupling in monitor\n')
+            else:
+                f.write('// Black Level referenced from color 0 (black) level\n')
+            f.write('// Black Level = '+str(self.blacklevel)+'\n')
+            f.write('// White Level = '+str(self.whitelevel)+'\n')
+            f.write('// Red Gain    = '+str(self.redgain)+'\n')
+            f.write('// Green Gain  = '+str(self.greengain)+'\n')
+            f.write('// Blue Gain   = '+str(self.bluegain)+'\n')
+            f.write('// Integer format is ARGB (0xAARRGGBB)\n')
+            f.write('//\n')
+            f.write('static const rgb_t colors[256] = {\n')
+            for i in range(0,32):
+                for j in range(0,8):
+                    k = i*8+j
+                    R, G, B = self.CalculateColor(k, includeall=True)
+                    value = 0xff000000 + (int(R*255.0)<<16) + (int(G*255.0)<<8) + int(B*255.0)
+                    f.write('0x{:08x}'.format(value))
+                    if (i == 31) and (j == 7):
+                        pass
+                    else:
+                        f.write(', ')
+                f.write('\n')
+            f.write('}\n')
+        popup = Popup(title='Info',content=Label(text='File exported to '+ export_filename),
+            size_hint=(None, None), size=(400, 100))
+        popup.open()
 
     def UseSyncLevels(self, tf):
         self.usesync = tf
+        self.UpdateColors()
+
+    def FilterGorf(self, tf):
+        self.filtergorf = tf
+        self.UpdateColors()
+
+    def FilterGorfPgm1(self, tf):
+        self.filtergorfpgm1 = tf
+        self.UpdateColors()
+
+    def FilterWow(self, tf):
+        self.filterwow = tf
+        self.UpdateColors()
+
+    def FilterRobby(self, tf):
+        self.filterrobby = tf
         self.UpdateColors()
 
 class PalEditApp(App):
