@@ -455,11 +455,11 @@ class MainWindow(BoxLayout):
         with open(export_filename,"w") as f:
             f.write('//\n')
             f.write('// Created from: '+input_filename+'\n')
-            if self.mode == MODE_USE_SYNC_LEVELS:
+            if self.mode == self.MODE_USE_SYNC_LEVELS:
                 f.write('// Black Level referenced to RGB voltages during sync, to adjust for AC coupling in monitor\n')
-            elif self.mode == MODE_USE_COLOR_0:
+            elif self.mode == self.MODE_USE_COLOR_0:
                 f.write('// Black Level referenced from color 0 (black) level\n')
-            else: # MODE_USE_ZERO_VOLTS
+            else: # self.MODE_USE_ZERO_VOLTS
                 f.write('// Black Level referenced to zero volts\n\n')
             f.write('// Black Level = '+str(self.blacklevel)+'\n')
             f.write('// White Level = '+str(self.whitelevel)+'\n')
